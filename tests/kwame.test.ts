@@ -38,6 +38,11 @@ describe("parse", () => {
     expect(parse("lookup cocoa")).toEqual({ t: "commodity", query: "cocoa" });
     expect(parse("commodity brent")).toEqual({ t: "commodity", query: "brent" });
   });
+  test("startups", () => {
+    expect(parse("startups")).toEqual({ t: "startups" });
+    expect(parse("startup stocks")).toEqual({ t: "startups" });
+    expect(parse("how is nubank doing")).toEqual({ t: "quote", query: "nubank" });
+  });
 });
 
 // ---------- e2e against a stubbed Baobab ----------
@@ -49,7 +54,7 @@ function q(sym: string, price: number, chgPct: number) {
     wk52High: price * 1.2, wk52Low: price * 0.8, volume: 1000, asof: Date.now(), stale: false,
   };
 }
-const QUOTES = [q("USDNGN=X", 1327.66, -0.05), q("VALE", 13.76, 1.1), q("BZ=F", 68.4, 2.5)];
+const QUOTES = [q("USDNGN=X", 1327.66, -0.05), q("VALE", 13.76, 1.1), q("BZ=F", 68.4, 2.5), q("NU", 12.34, 2.5)];
 
 let stub: any, server: any, port = 0;
 const ask = (text: string) =>
@@ -80,7 +85,7 @@ beforeAll(async () => {
       if (u.pathname === "/api/news")
         return ok({ news: [{ title: "Test headline", link: "https://x.test", source: "X", published: Date.now(), region: "africa" }] });
       if (u.pathname === "/api/overview")
-        return ok({ asof: Date.now(), indices: [QUOTES[1]], fx: [QUOTES[0]], cmd: [QUOTES[2]], stocks: [QUOTES[1]], global: [] });
+        return ok({ asof: Date.now(), indices: [QUOTES[1]], fx: [QUOTES[0]], cmd: [QUOTES[2]], stocks: [QUOTES[1]], startups: [QUOTES[1]], global: [] });
       if (u.pathname === "/api/watchlist" && req.method === "GET") return ok({ watchlist: [QUOTES[1]] });
       if (u.pathname === "/api/watchlist" && req.method === "POST") return ok({ ok: true });
       const del = u.pathname.match(/^\/api\/watchlist\/(.+)$/);
@@ -151,6 +156,15 @@ describe("ask", () => {
     expect(d.reply).toContain("USD per barrel");
     expect(d.reply).toContain("Why it matters");
     expect(d.reply).toMatch(/[▁▂▃▄▅▆▇█]/);
+  });
+  test("startups board", async () => {
+    const d = await ask("startups");
+    expect(d.reply).toContain("Startups");
+  });
+  test("startup alias", async () => {
+    const d = await ask("nubank");
+    expect(d.reply).toContain("NU");
+    expect(d.reply).toContain("12.34");
   });
   test("baobab down", async () => {
     process.env.BAOBAB_URL = "http://127.0.0.1:1";

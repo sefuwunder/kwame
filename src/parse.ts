@@ -12,6 +12,7 @@ export type Intent =
   | { t: "trend"; query: string; range: string }
   | { t: "commodities" }
   | { t: "commodity"; query: string }
+  | { t: "startups" }
   | { t: "help" }
   | { t: "unknown" };
 
@@ -28,6 +29,9 @@ export const ALIASES: Record<string, string> = {
   brent: "BZ=F", wti: "CL=F", oil: "BZ=F", crude: "BZ=F",
   gold: "GC=F", silver: "SI=F", copper: "HG=F", platinum: "PL=F",
   coffee: "KC=F", cocoa: "CC=F", sugar: "SB=F",
+  nubank: "NU", "nu holdings": "NU", stone: "STNE", stoneco: "STNE",
+  pagseguro: "PAGS", pagbank: "PAGS", xp: "XP", "xp inc": "XP",
+  jumia: "JMIA", dlocal: "DLO", globant: "GLOB",
   vale: "VALE", petrobras: "PBR", itau: "ITUB", "america movil": "AMX",
   femsa: "FMX", mercadolibre: "MELI", ypf: "YPF", galicia: "GGAL",
   sqm: "SQM", credicorp: "BAP", ecopetrol: "EC", bancolombia: "CIB",
@@ -108,6 +112,7 @@ export function parse(raw: string): Intent {
   if (/^(commodities|commodity prices|all commodities|commodity board)$/.test(text)) return { t: "commodities" };
   m = text.match(/^(?:lookup|commodity)\s+(.+)$/);
   if (m) return { t: "commodity", query: m[1] };
+  if (/^(startups|startup stocks|startup board|new economy)$/.test(text)) return { t: "startups" };
 
   const stripQ = (s: string) => s.replace(/^(the|price of|quote for)\s+/, "").trim();
   m = text.match(/(?:trend|chart|history)\s+(?:of|for)\s+(.+)/);

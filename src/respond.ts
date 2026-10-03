@@ -185,6 +185,18 @@ async function commodityReply(query: string): Promise<string> {
   return lines.join("\n");
 }
 
+async function startupsReply(): Promise<string> {
+  const o = await bOverview();
+  const list = (o.startups || []) as any[];
+  if (!list.length) return "No startup data right now.";
+  const lines = ["Startups & new economy — the region's unicorns, now listed"];
+  for (const q of list) {
+    lines.push(`${q.name} (${q.sym})`);
+    lines.push(`  ${fmtP(q.price)}  ${arrow(q)} ${chgStr(q)}${q.note ? "  · " + q.note : ""}`);
+  }
+  return lines.join("\n");
+}
+
 async function watchlistReply(): Promise<string> {  const d = await bWatch();
   const list = d.watchlist || [];
   if (!list.length) return "Your watchlist is empty. Say “add VALE” to start one.";
@@ -202,6 +214,7 @@ function helpText(): string {
     "• “what's moving” — biggest gainers & losers",
     "• “news africa” / “headlines jamaica” — regional news",
     "• “commodities” / “lookup cocoa” — the commodities desk",
+    "• “startups” — the startup board",
     "• “add VALE” / “remove VALE” / “watchlist” — your watchlist",
     "I also take Baobab functions verbatim: TOP, W, N, FX, CMD, SEC, ADD.",
   ].join("\n");
@@ -223,6 +236,7 @@ export async function respond(raw: string): Promise<string> {
       case "trend": return await trendReply(intent.query, intent.range);
       case "commodities": return await commoditiesReply();
       case "commodity": return await commodityReply(intent.query);
+      case "startups": return await startupsReply();
       case "help": return helpText();
       case "watchAdd": {
         const r = await resolve(intent.sym);
