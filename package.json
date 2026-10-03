@@ -1,0 +1,6 @@
+{
+  "name": "kwame",
+  "version": "1.0.0",
+  "description": "A conversational agent that speaks Baobab's market-data API.",
+  "scripts": { "start": "bun src/server.ts", "cli": "bun src/cli.ts", "test": "bun test" }
+}
