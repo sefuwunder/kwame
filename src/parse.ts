@@ -10,6 +10,8 @@ export type Intent =
   | { t: "watchDel"; sym: string }
   | { t: "quote"; query: string }
   | { t: "trend"; query: string; range: string }
+  | { t: "commodities" }
+  | { t: "commodity"; query: string }
   | { t: "help" }
   | { t: "unknown" };
 
@@ -102,6 +104,10 @@ export function parse(raw: string): Intent {
   if (m) return { t: "watchDel", sym: resolveSym(m[1]) };
 
   if (/\bnews\b|\bheadlines\b/.test(text)) return { t: "news", region: newsRegion(text) };
+
+  if (/^(commodities|commodity prices|all commodities|commodity board)$/.test(text)) return { t: "commodities" };
+  m = text.match(/^(?:lookup|commodity)\s+(.+)$/);
+  if (m) return { t: "commodity", query: m[1] };
 
   const stripQ = (s: string) => s.replace(/^(the|price of|quote for)\s+/, "").trim();
   m = text.match(/(?:trend|chart|history)\s+(?:of|for)\s+(.+)/);

@@ -94,6 +94,19 @@ async function trendReply(query: string, range: string): Promise<string> {
 
 const REGION_LABEL: Record<string, string> = { africa: "Africa", caribbean: "Caribbean", latam: "Latin America", global: "Global" };
 
+// Stable futures-contract specs for the commodities desk.
+const COMMODITY_META: Record<string, { unit: string; exchange: string }> = {
+  "BZ=F": { unit: "USD per barrel", exchange: "ICE" },
+  "CL=F": { unit: "USD per barrel", exchange: "NYMEX" },
+  "GC=F": { unit: "USD per troy ounce", exchange: "COMEX" },
+  "SI=F": { unit: "USD per troy ounce", exchange: "COMEX" },
+  "HG=F": { unit: "USD per pound", exchange: "COMEX" },
+  "PL=F": { unit: "USD per troy ounce", exchange: "NYMEX" },
+  "KC=F": { unit: "US cents per pound", exchange: "ICE" },
+  "CC=F": { unit: "USD per metric ton", exchange: "ICE" },
+  "SB=F": { unit: "US cents per pound", exchange: "ICE" },
+};
+
 async function overviewReply(): Promise<string> {
   const o = await bOverview();
   const lines = ["Market overview"];
@@ -134,8 +147,45 @@ async function newsReply(region: string): Promise<string> {
   )].join("\n");
 }
 
-async function watchlistReply(): Promise<string> {
-  const d = await bWatch();
+async function commoditiesReply(): Promise<string> {
+  const o = await bOverview();
+  const list = (o.cmd || []) as any[];
+  if (!list.length) return "No commodity data right now.";
+  const lines = ["Commodities — the region's lifelines"];
+  for (const q of list) {
+    const meta = COMMODITY_META[q.sym];
+    lines.push(`${q.name} (${q.sym.replace("=F", "")})`);
+    lines.push(`  ${fmtP(q.price)}${meta ? " " + meta.unit : ""}  ${arrow(q)} ${chgStr(q)}`);
+    if (q.note) lines.push(`  ↳ ${q.note}`);
+  }
+  return lines.join("\n");
+}
+
+async function commodityReply(query: string): Promise<string> {
+  const r = await resolve(query);
+  if (!r) return `I don't know "${query}". Try "commodities" for the full board.`;
+  const d = await bQuotes([r.sym]);
+  const q = d.quotes[0];
+  if (!q) return `No quote for ${r.sym} right now.`;
+  const meta = COMMODITY_META[q.sym];
+  const lines = [
+    `${q.name} — ${q.sym}${meta ? ` (${meta.exchange})` : ""}${q.stale ? "  (stale)" : ""}`,
+    `${fmtP(q.price)}${meta ? " " + meta.unit : ""}  ${arrow(q)} ${chgStr(q)}`,
+    `Day ${fmtP(q.dayLow)}–${fmtP(q.dayHigh)} · 52w ${fmtP(q.wk52Low)}–${fmtP(q.wk52High)}`,
+  ];
+  if (q.note) lines.push(`Why it matters: ${q.note}`);
+  try {
+    const h = await bHistory(q.sym, "1M");
+    const bars = h.bars || [];
+    if (bars.length > 1) {
+      const pct = ((bars[bars.length - 1].c - bars[0].c) / bars[0].c) * 100;
+      lines.push(`1M: ${pct >= 0 ? "+" : ""}${pct.toFixed(2)}% ${spark(bars)}`);
+    }
+  } catch { /* quote without trend is still useful */ }
+  return lines.join("\n");
+}
+
+async function watchlistReply(): Promise<string> {  const d = await bWatch();
   const list = d.watchlist || [];
   if (!list.length) return "Your watchlist is empty. Say “add VALE” to start one.";
   return ["Watchlist",
@@ -151,6 +201,7 @@ function helpText(): string {
     "• “markets” / TOP — regional overview",
     "• “what's moving” — biggest gainers & losers",
     "• “news africa” / “headlines jamaica” — regional news",
+    "• “commodities” / “lookup cocoa” — the commodities desk",
     "• “add VALE” / “remove VALE” / “watchlist” — your watchlist",
     "I also take Baobab functions verbatim: TOP, W, N, FX, CMD, SEC, ADD.",
   ].join("\n");
@@ -170,6 +221,8 @@ export async function respond(raw: string): Promise<string> {
       case "watchlist": return await watchlistReply();
       case "quote": return await quoteReply(intent.query);
       case "trend": return await trendReply(intent.query, intent.range);
+      case "commodities": return await commoditiesReply();
+      case "commodity": return await commodityReply(intent.query);
       case "help": return helpText();
       case "watchAdd": {
         const r = await resolve(intent.sym);

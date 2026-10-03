@@ -31,6 +31,13 @@ describe("parse", () => {
     expect(parse("VALE")).toEqual({ t: "quote", query: "VALE" });
     expect(parse("asdkfjhasd qwerty zzz")).toEqual({ t: "unknown" });
   });
+  test("commodities desk", () => {
+    expect(parse("commodities")).toEqual({ t: "commodities" });
+    expect(parse("commodity prices")).toEqual({ t: "commodities" });
+    expect(parse("all commodities")).toEqual({ t: "commodities" });
+    expect(parse("lookup cocoa")).toEqual({ t: "commodity", query: "cocoa" });
+    expect(parse("commodity brent")).toEqual({ t: "commodity", query: "brent" });
+  });
 });
 
 // ---------- e2e against a stubbed Baobab ----------
@@ -131,6 +138,19 @@ describe("ask", () => {
   test("unknown", async () => {
     const d = await ask("asdkfjhasd qwerty zzz");
     expect(d.reply).toContain("didn't catch");
+  });
+  test("commodities board", async () => {
+    const d = await ask("commodities");
+    expect(d.reply).toContain("Commodities");
+    expect(d.reply).toContain("BZ=F");
+  });
+  test("commodity lookup", async () => {
+    const d = await ask("lookup brent");
+    expect(d.reply).toContain("BZ=F");
+    expect(d.reply).toContain("(ICE)");
+    expect(d.reply).toContain("USD per barrel");
+    expect(d.reply).toContain("Why it matters");
+    expect(d.reply).toMatch(/[▁▂▃▄▅▆▇█]/);
   });
   test("baobab down", async () => {
     process.env.BAOBAB_URL = "http://127.0.0.1:1";
